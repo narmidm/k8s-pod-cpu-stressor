@@ -50,8 +50,7 @@ Adjust these parameters according to your requirements to simulate different CPU
 
 
 ## Check the Public Docker Image
-
-The `k8s-pod-cpu-stressor` Docker image is publicly available on Docker Hub. You can check and pull the image using the following command:
+The [`k8s-pod-cpu-stressor`](https://hub.docker.com/r/narmidm/k8s-pod-cpu-stressor "Docker Hub - narmidm/k8s-pod-cpu-stressor") Docker image is publicly available on Docker Hub. You can check and pull the image using the following command:
 
 ```shell
 docker pull narmidm/k8s-pod-cpu-stressor:latest
