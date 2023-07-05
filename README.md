@@ -25,3 +25,26 @@ To use the `k8s-pod-cpu-stressor`, you need to have the following installed:
 
    ```shell
    go build -o cpu-stress .
+## Running with Docker
+
+Build the Docker image using the provided Dockerfile:
+
+   ```shell
+   docker build -t k8s-pod-cpu-stressor .
+  ```
+Run the Docker container, specifying the desired CPU usage and stress duration as arguments:
+```shell
+docker run --rm k8s-pod-cpu-stressor -cpu=0.2 -duration=10s
+```
+Replace 0.2 and 10s with the desired CPU usage (fraction) and duration, respectively.
+
+## Contributing
+Contributions are welcome! If you find a bug or have a suggestion, please open an issue or submit a pull request. For major changes, please discuss them first in the issue tracker.
+
+## License
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+
+
+
+
