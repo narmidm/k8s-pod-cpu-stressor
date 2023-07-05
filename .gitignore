@@ -19,3 +19,9 @@
 
 # Go workspace file
 go.work
+.idea
+
+
+.idea/k8s-pod-cpu-stressor.iml
+.idea/modules.xml
+cpu-stress
