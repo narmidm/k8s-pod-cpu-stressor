@@ -1,19 +1,21 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"runtime"
 	"time"
 )
 
 func main() {
-	cpuUsage := 0.2        // Desired CPU usage (e.g., 0.2 for 200m or 1.0 for 1000m)
-	duration := 10 * time.Second // Duration for the CPU stress (e.g., 10 seconds)
+	cpuUsagePtr := flag.Float64("cpu", 0.2, "CPU usage as a fraction (e.g., 0.2 for 200m)")
+	durationPtr := flag.Duration("duration", 10*time.Second, "Duration for the CPU stress (e.g., 10s)")
+	flag.Parse()
 
 	numCPU := runtime.NumCPU()
 	runtime.GOMAXPROCS(numCPU)
 
-	numGoroutines := int(float64(numCPU) * cpuUsage)
+	numGoroutines := int(float64(numCPU) * (*cpuUsagePtr))
 
 	fmt.Printf("Starting CPU stress with %d goroutines...\n", numGoroutines)
 
@@ -31,7 +33,7 @@ func main() {
 		}()
 	}
 
-	time.Sleep(duration)
+	time.Sleep(*durationPtr)
 	close(done)
 
 	fmt.Println("CPU stress completed.")
