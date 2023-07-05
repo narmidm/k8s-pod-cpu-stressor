@@ -1,6 +1,6 @@
 .PHONY: docker-build
 docker-build:
-	docker build -t k8s-pod-cpu-stressor:1.0.0 .
+	docker build -t k8s-pod-cpu-stressor:latest .
 
 .PHONY: build
 build:

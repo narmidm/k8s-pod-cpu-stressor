@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+	"os/signal"
 	"runtime"
 	"time"
 )
@@ -19,7 +21,11 @@ func main() {
 
 	fmt.Printf("Starting CPU stress with %d goroutines...\n", numGoroutines)
 
-	done := make(chan bool)
+	done := make(chan struct{})
+
+	// Capture termination signals
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, os.Kill)
 
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
@@ -33,8 +39,16 @@ func main() {
 		}()
 	}
 
-	time.Sleep(*durationPtr)
-	close(done)
+	go func() {
+		// Wait for termination signal
+		<-quit
+		fmt.Println("Termination signal received. Stopping CPU stress...")
+		close(done)
+	}()
 
+	time.Sleep(*durationPtr)
+
+	// Exit the program gracefully
 	fmt.Println("CPU stress completed.")
+	os.Exit(0)
 }
