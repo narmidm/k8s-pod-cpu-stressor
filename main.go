@@ -12,6 +12,7 @@ import (
 func main() {
 	cpuUsagePtr := flag.Float64("cpu", 0.2, "CPU usage as a fraction (e.g., 0.2 for 200m)")
 	durationPtr := flag.Duration("duration", 10*time.Second, "Duration for the CPU stress (e.g., 10s)")
+	runForeverPtr := flag.Bool("forever", false, "Run CPU stress indefinitely")
 	flag.Parse()
 
 	numCPU := runtime.NumCPU()
@@ -46,9 +47,13 @@ func main() {
 		close(done)
 	}()
 
-	time.Sleep(*durationPtr)
+	if !*runForeverPtr {
+		time.Sleep(*durationPtr)
+		fmt.Println("CPU stress completed.")
+		os.Exit(0)
+	}
 
-	// Exit the program gracefully
-	fmt.Println("CPU stress completed.")
-	os.Exit(0)
+	// Run stress indefinitely
+	fmt.Println("CPU stress will run indefinitely. Press Ctrl+C to stop.")
+	select {}
 }
