@@ -6,6 +6,7 @@ The `k8s-pod-cpu-stressor` is a tool designed to simulate CPU stress on Kubernet
 
 - Simulates CPU stress on Kubernetes pods.
 - Configurable CPU usage (in millicores) and stress duration.
+- Option to run CPU stress indefinitely.
 - Helps evaluate Kubernetes cluster performance and resource allocation.
 
 ## Getting Started
@@ -25,6 +26,8 @@ To use the `k8s-pod-cpu-stressor`, you need to have the following installed:
 
    ```shell
    go build -o cpu-stress .
+   ```
+
 ## Running with Docker
 
 Build the Docker image using the provided Dockerfile:
@@ -32,11 +35,14 @@ Build the Docker image using the provided Dockerfile:
    ```shell
    docker build -t k8s-pod-cpu-stressor .
   ```
-Run the Docker container, specifying the desired CPU usage and stress duration as arguments:
+
+Run the Docker container, specifying the desired CPU usage, stress duration, and optionally whether to run CPU stress indefinitely:
+
 ```shell
-docker run --rm k8s-pod-cpu-stressor -cpu=0.2 -duration=10s
+docker run --rm k8s-pod-cpu-stressor -cpu=0.2 -duration=10s -forever
 ```
-Replace 0.2 and 10s with the desired CPU usage (fraction) and duration, respectively.
+
+Replace `0.2` and `10s` with the desired CPU usage (fraction) and duration, respectively. Add `-forever` flag to run CPU stress indefinitely.
 
 ## CPU Usage and Duration
 
@@ -46,10 +52,13 @@ The `k8s-pod-cpu-stressor` allows you to specify the desired CPU usage and stres
 
 - **Stress Duration**: The stress duration defines how long the CPU stress operation should run. It is specified using the `-duration` argument, which accepts a duration value with a unit. Supported units include seconds (s), minutes (m), hours (h), and days (d). For example, `-duration=10s` represents a stress duration of 10 seconds, `-duration=5m` represents 5 minutes, `-duration=2h` represents 2 hours, and `-duration=1d` represents 1 day.
 
+- **Run Indefinitely**: To run CPU stress indefinitely, include the `-forever` flag.
+
 Adjust these parameters according to your requirements to simulate different CPU load scenarios.
 
 
 ## Check the Public Docker Image
+
 The [`k8s-pod-cpu-stressor`](https://hub.docker.com/r/narmidm/k8s-pod-cpu-stressor "Docker Hub - narmidm/k8s-pod-cpu-stressor") Docker image is publicly available on Docker Hub. You can check and pull the image using the following command:
 
 ```shell
@@ -57,7 +66,9 @@ docker pull narmidm/k8s-pod-cpu-stressor:latest
 ```
 
 ## Sample Deployment Manifest
+
 Use the following deployment manifest as a starting point to deploy the k8s-pod-cpu-stressor image in your Kubernetes cluster:
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -79,6 +90,7 @@ spec:
           args:
             - "-cpu=0.2"
             - "-duration=10s"
+            - "-forever"
           resources:
             limits:
               cpu: "200m"
@@ -87,12 +99,9 @@ spec:
 ```
 
 ## Contributing
+
 Contributions are welcome! If you find a bug or have a suggestion, please open an issue or submit a pull request. For major changes, please discuss them first in the issue tracker.
 
 ## License
+
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-
-
-
-
