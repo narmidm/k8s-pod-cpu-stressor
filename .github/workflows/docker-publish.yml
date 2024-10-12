@@ -83,6 +83,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             ${{ env.new_version }}
+            latest
 
       # Build and push Docker image, skip pushing on PRs
       - name: Build and push Docker image
