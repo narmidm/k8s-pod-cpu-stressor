@@ -1,21 +1,13 @@
-name: Docker Publish and Versioning
+name: Docker Latest Version
 
 on:
   push:
     branches:
       - "master"
-    tags:
-      - 'v*.*.*'
   pull_request:
     branches:
       - "master"
   workflow_dispatch:
-
-env:
-  # Docker Hub registry URL (use docker.io for Docker Hub)
-  REGISTRY: docker.io
-  IMAGE_NAME: ${{ github.repository }}
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -26,35 +18,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set up Git versioning
-        id: version
-        run: |
-          # Set version based on commit message prefix (fix, feat, chore or improvement)
-          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          commit_message=$(git log -1 --pretty=%B)
-          version_prefix=${latest_tag#v}
-          major=$(echo $version_prefix | cut -d'.' -f1)
-          minor=$(echo $version_prefix | cut -d'.' -f2)
-          patch=$(echo $version_prefix | cut -d'.' -f3)
-
-          if [[ "$commit_message" =~ ^feat\(.*\) ]]; then
-            # Bump major version, reset minor and patch
-            major=$((major + 1))
-            minor=0
-            patch=0
-          elif [[ "$commit_message" =~ ^fix\(.*\) ]]; then
-            # Bump patch version
-            patch=$((patch + 1))
-          elif [[ "$commit_message" =~ ^chore\(.*\) || "$commit_message" =~ ^improvement\(.*\) ]]; then
-            # Bump minor version, reset patch
-            minor=$((minor + 1))
-            patch=0
-          fi
-
-          new_version="v$major.$minor.$patch"
-          echo "new_version=$new_version" >> $GITHUB_ENV
-          echo "New Version: $new_version"
 
       # Install cosign tool, only run if it's not a pull request
       - name: Install cosign
@@ -81,9 +44,7 @@ jobs:
         uses: docker/metadata-action@v5.0.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            ${{ env.new_version }}
-            latest
+          tags: latest
 
       # Build and push Docker image, skip pushing on PRs
       - name: Build and push Docker image
@@ -92,17 +53,7 @@ jobs:
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
-          tags: |
-            ${{ steps.meta.outputs.tags }}
-            latest
+          tags: latest
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      # Sign the resulting Docker image digest except on PRs
-#      - name: Sign the published Docker image
-#        if: ${{ github.event_name != 'pull_request' }}
-#        env:
-#          TAGS: ${{ steps.meta.outputs.tags }}
-#          DIGEST: ${{ steps.build-and-push.outputs.digest }}
-#        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
