@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math/rand"
 	"os"
 	"os/signal"
 	"runtime"
@@ -35,10 +36,11 @@ func main() {
 
 	var stopFlag int32
 
+	// Improved workload generation
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
-			workDuration := time.Duration(*cpuUsagePtr*100) * time.Millisecond
-			idleDuration := time.Duration((1-*cpuUsagePtr)*100) * time.Millisecond
+			workDuration := time.Duration(*cpuUsagePtr*1000) * time.Microsecond
+			idleDuration := time.Duration((1-*cpuUsagePtr)*1000) * time.Microsecond
 
 			for {
 				if atomic.LoadInt32(&stopFlag) == 1 {
@@ -48,6 +50,8 @@ func main() {
 				// Busy loop for the specified work duration
 				endWork := time.Now().Add(workDuration)
 				for time.Now().Before(endWork) {
+					// Perform a small computation to keep the CPU active
+					_ = rand.Float64() * rand.Float64()
 				}
 
 				// Idle for the rest of the interval
@@ -69,7 +73,8 @@ func main() {
 		fmt.Println("\nCPU stress completed.")
 		atomic.StoreInt32(&stopFlag, 1)
 		close(done)
-		os.Exit(0)
+		// Keep the process running to prevent the pod from restarting
+		select {}
 	}
 
 	// Run stress indefinitely
