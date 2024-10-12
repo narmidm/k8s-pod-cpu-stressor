@@ -34,7 +34,7 @@ Build the Docker image using the provided Dockerfile:
 
    ```shell
    docker build -t k8s-pod-cpu-stressor .
-  ```
+   ```
 
 Run the Docker container, specifying the desired CPU usage, stress duration, and optionally whether to run CPU stress indefinitely:
 
@@ -56,6 +56,24 @@ The `k8s-pod-cpu-stressor` allows you to specify the desired CPU usage and stres
 
 Adjust these parameters according to your requirements to simulate different CPU load scenarios.
 
+### Kubernetes Resource Requests and Limits
+
+It is recommended to specify Kubernetes resource requests and limits to control the amount of CPU resources consumed by the pod, and to prevent overloading your cluster. For example:
+
+- **Requests**: This defines the minimum amount of CPU that the pod is guaranteed to have.
+- **Limits**: This defines the maximum amount of CPU that the pod can use.
+
+Adding requests and limits helps Kubernetes manage resources efficiently and ensures that your cluster remains stable during stress testing.
+
+Example:
+
+```yaml
+resources:
+  requests:
+    cpu: "100m"
+  limits:
+    cpu: "200m"
+```
 
 ## Check the Public Docker Image
 
@@ -97,6 +115,38 @@ spec:
             requests:
               cpu: "100m"
 ```
+
+## Sample Job Manifest
+
+If you want to run the CPU stressor for a fixed duration as a one-time job, you can use the following Kubernetes Job manifest:
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cpu-stressor-job
+spec:
+  template:
+    metadata:
+      labels:
+        app: cpu-stressor
+    spec:
+      containers:
+        - name: cpu-stressor
+          image: narmidm/k8s-pod-cpu-stressor:latest
+          args:
+            - "-cpu=0.5"
+            - "-duration=5m"
+          resources:
+            limits:
+              cpu: "500m"
+            requests:
+              cpu: "250m"
+      restartPolicy: Never
+  backoffLimit: 3
+```
+
+This manifest runs the `k8s-pod-cpu-stressor` as a Kubernetes Job, which will execute the stress test once for 5 minutes and then stop. The `backoffLimit` specifies the number of retries if the job fails.
 
 ## Contributing
 
