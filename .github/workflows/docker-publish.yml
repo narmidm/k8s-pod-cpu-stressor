@@ -8,6 +8,12 @@ on:
     branches:
       - "master"
   workflow_dispatch:
+
+env:
+  # Docker Hub registry URL (use docker.io for Docker Hub)
+  REGISTRY: docker.io/narmidm
+  IMAGE_NAME: k8s-pod-cpu-stressor
+
 jobs:
   build:
     runs-on: ubuntu-latest
