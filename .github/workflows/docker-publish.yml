@@ -92,12 +92,14 @@ jobs:
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            latest
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-#      # Sign the resulting Docker image digest except on PRs
+      # Sign the resulting Docker image digest except on PRs
 #      - name: Sign the published Docker image
 #        if: ${{ github.event_name != 'pull_request' }}
 #        env:
