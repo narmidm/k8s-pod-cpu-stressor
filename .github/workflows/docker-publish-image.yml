@@ -35,7 +35,7 @@ jobs:
       - name: Build Docker Image
         run: |
           # Build Docker image
-          docker build -t narmidm/k8s-pod-cpu-stressor:latest -f docker/Dockerfile .
+          docker build -t narmidm/k8s-pod-cpu-stressor:latest .
           # Tag the Docker image with the release version
           docker tag narmidm/k8s-pod-cpu-stressor:latest narmidm/k8s-pod-cpu-stressor:${{ env.VERSION }}
 
