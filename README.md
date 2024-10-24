@@ -4,6 +4,7 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/narmidm/k8s-pod-cpu-stressor)](https://hub.docker.com/repository/docker/narmidm/k8s-pod-cpu-stressor)
 [![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/narmidm/k8s-pod-cpu-stressor)](https://raw.githubusercontent.com/narmidm/k8s-pod-cpu-stressor/refs/heads/master/go.mod)
 [![GitHub License](https://img.shields.io/github/license/narmidm/k8s-pod-cpu-stressor)](https://raw.githubusercontent.com/narmidm/k8s-pod-cpu-stressor/refs/heads/master/LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/narmidm/k8s-pod-cpu-stressor)](https://goreportcard.com/report/github.com/narmidm/k8s-pod-cpu-stressor)
 ![Contributors](https://img.shields.io/github/contributors/narmidm/k8s-pod-cpu-stressor)
 [![GitHub Issues](https://img.shields.io/github/issues/narmidm/k8s-pod-cpu-stressor)](https://github.com/narmidm/k8s-pod-cpu-stressor/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/narmidm/k8s-pod-cpu-stressor)](https://github.com/narmidm/k8s-pod-cpu-stressor/stargazers)
