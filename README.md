@@ -13,7 +13,6 @@
 
 ### Connect with me
 [![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/that_imran)](https://x.com/intent/user?screen_name=that_imran)
-[![Linktree](https://img.shields.io/badge/linktree-1de9b6?style=plastic&logo=linktree&logoColor=white)](https://linktr.ee/narmidm)
 <a href="https://www.linkedin.com/comm/mynetwork/discovery-see-all?usecase=PEOPLE_FOLLOWS&followMember=narmidm" target="blank"><img src="https://img.shields.io/badge/LinkedIn-Connect-blue" alt="narmidm" /></a>
 
 
