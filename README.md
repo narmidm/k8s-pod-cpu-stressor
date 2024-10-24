@@ -4,14 +4,17 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/narmidm/k8s-pod-cpu-stressor)](https://hub.docker.com/repository/docker/narmidm/k8s-pod-cpu-stressor)
 [![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/narmidm/k8s-pod-cpu-stressor)](https://raw.githubusercontent.com/narmidm/k8s-pod-cpu-stressor/refs/heads/master/go.mod)
 [![GitHub License](https://img.shields.io/github/license/narmidm/k8s-pod-cpu-stressor)](https://raw.githubusercontent.com/narmidm/k8s-pod-cpu-stressor/refs/heads/master/LICENSE)
-[![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/that_imran)](https://x.com/intent/user?screen_name=that_imran)
-[![Linktree](https://img.shields.io/badge/linktree-1de9b6?style=for-the-badge&logo=linktree&logoColor=white)](https://linktr.ee/narmidm)
-<a href="https://www.linkedin.com/comm/mynetwork/discovery-see-all?usecase=PEOPLE_FOLLOWS&followMember=narmidm" target="blank"><img src="https://img.shields.io/badge/LinkedIn-Connect-blue" alt="narmidm" /></a>
 ![Contributors](https://img.shields.io/github/contributors/narmidm/k8s-pod-cpu-stressor)
 [![GitHub Issues](https://img.shields.io/github/issues/narmidm/k8s-pod-cpu-stressor)](https://github.com/narmidm/k8s-pod-cpu-stressor/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/narmidm/k8s-pod-cpu-stressor)](https://github.com/narmidm/k8s-pod-cpu-stressor/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/narmidm/k8s-pod-cpu-stressor)](https://github.com/narmidm/k8s-pod-cpu-stressor/forks)
 [![Last Commit](https://img.shields.io/github/last-commit/narmidm/k8s-pod-cpu-stressor)](https://github.com/narmidm/k8s-pod-cpu-stressor/commits/master/)
+
+### Connect with me
+[![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/that_imran)](https://x.com/intent/user?screen_name=that_imran)
+[![Linktree](https://img.shields.io/badge/linktree-1de9b6?style=plastic&logo=linktree&logoColor=white)](https://linktr.ee/narmidm)
+<a href="https://www.linkedin.com/comm/mynetwork/discovery-see-all?usecase=PEOPLE_FOLLOWS&followMember=narmidm" target="blank"><img src="https://img.shields.io/badge/LinkedIn-Connect-blue" alt="narmidm" /></a>
+
 
 # k8s-pod-cpu-stressor
 
