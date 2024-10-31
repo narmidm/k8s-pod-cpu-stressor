@@ -9,13 +9,26 @@ import (
 	"runtime"
 	"sync/atomic"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.New()
 
 func main() {
 	cpuUsagePtr := flag.Float64("cpu", 0.2, "CPU usage as a fraction (e.g., 0.2 for 20% CPU usage)")
 	durationPtr := flag.Duration("duration", 10*time.Second, "Duration for the CPU stress (e.g., 10s)")
 	runForeverPtr := flag.Bool("forever", false, "Run CPU stress indefinitely")
 	flag.Parse()
+
+	// Validate input parameters
+	if *cpuUsagePtr <= 0 || *cpuUsagePtr > 1 {
+		log.Fatalf("Invalid CPU usage: %f. It must be between 0 and 1.", *cpuUsagePtr)
+	}
+
+	if *durationPtr <= 0 {
+		log.Fatalf("Invalid duration: %s. It must be greater than 0.", *durationPtr)
+	}
 
 	numCPU := runtime.NumCPU()
 	runtime.GOMAXPROCS(numCPU)
@@ -26,13 +39,15 @@ func main() {
 		numGoroutines = 1
 	}
 
-	fmt.Printf("Starting CPU stress with %d goroutines targeting %.2f CPU usage...\n", numGoroutines, *cpuUsagePtr)
+	log.Infof("Starting CPU stress with %d goroutines targeting %.2f CPU usage...", numGoroutines, *cpuUsagePtr)
 
 	done := make(chan struct{})
 
 	// Capture termination signals
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, os.Kill)
+	if err := signal.Notify(quit, os.Interrupt, os.Kill); err != nil {
+		log.Fatalf("Failed to set up signal notification: %v", err)
+	}
 
 	var stopFlag int32
 
@@ -63,14 +78,14 @@ func main() {
 	go func() {
 		// Wait for termination signal
 		<-quit
-		fmt.Println("\nTermination signal received. Stopping CPU stress...")
+		log.Println("\nTermination signal received. Stopping CPU stress...")
 		atomic.StoreInt32(&stopFlag, 1)
 		close(done)
 	}()
 
 	if !*runForeverPtr {
 		time.Sleep(*durationPtr)
-		fmt.Println("\nCPU stress completed.")
+		log.Println("\nCPU stress completed.")
 		atomic.StoreInt32(&stopFlag, 1)
 		close(done)
 		// Keep the process running to prevent the pod from restarting
@@ -78,6 +93,6 @@ func main() {
 	}
 
 	// Run stress indefinitely
-	fmt.Println("CPU stress will run indefinitely. Press Ctrl+C to stop.")
+	log.Println("CPU stress will run indefinitely. Press Ctrl+C to stop.")
 	<-done
 }

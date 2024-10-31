@@ -166,6 +166,157 @@ spec:
 
 This manifest runs the `k8s-pod-cpu-stressor` as a Kubernetes Job, which will execute the stress test once for 5 minutes and then stop. The `backoffLimit` specifies the number of retries if the job fails.
 
+## Detailed Usage Examples
+
+Here are some detailed usage examples to help you better understand how to use the `k8s-pod-cpu-stressor`:
+
+### Example 1: Run CPU stress for 30 seconds with 50% CPU usage
+
+```shell
+docker run --rm k8s-pod-cpu-stressor -cpu=0.5 -duration=30s
+```
+
+### Example 2: Run CPU stress indefinitely with 80% CPU usage
+
+```shell
+docker run --rm k8s-pod-cpu-stressor -cpu=0.8 -forever
+```
+
+### Example 3: Run CPU stress for 1 minute with 10% CPU usage
+
+```shell
+docker run --rm k8s-pod-cpu-stressor -cpu=0.1 -duration=1m
+```
+
+## Step-by-Step Guide for Building and Running the Docker Image
+
+Follow these steps to build and run the Docker image for `k8s-pod-cpu-stressor`:
+
+1. Clone the repository:
+
+   ```shell
+   git clone https://github.com/narmidm/k8s-pod-cpu-stressor.git
+   cd k8s-pod-cpu-stressor
+   ```
+
+2. Build the Docker image:
+
+   ```shell
+   docker build -t k8s-pod-cpu-stressor .
+   ```
+
+3. Run the Docker container with desired parameters:
+
+   ```shell
+   docker run --rm k8s-pod-cpu-stressor -cpu=0.2 -duration=10s
+   ```
+
+## Using the Tool in a Kubernetes Environment
+
+To use the `k8s-pod-cpu-stressor` in a Kubernetes environment, you can create a deployment or a job using the provided sample manifests.
+
+### Sample Deployment Manifest
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-stressor-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cpu-stressor
+  template:
+    metadata:
+      labels:
+        app: cpu-stressor
+    spec:
+      containers:
+        - name: cpu-stressor
+          image: narmidm/k8s-pod-cpu-stressor:latest
+          args:
+            - "-cpu=0.2"
+            - "-duration=10s"
+            - "-forever"
+          resources:
+            limits:
+              cpu: "200m"
+            requests:
+              cpu: "100m"
+```
+
+### Sample Job Manifest
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cpu-stressor-job
+spec:
+  template:
+    metadata:
+      labels:
+        app: cpu-stressor
+    spec:
+      containers:
+        - name: cpu-stressor
+          image: narmidm/k8s-pod-cpu-stressor:latest
+          args:
+            - "-cpu=0.5"
+            - "-duration=5m"
+          resources:
+            limits:
+              cpu: "500m"
+            requests:
+              cpu: "250m"
+      restartPolicy: Never
+  backoffLimit: 3
+```
+
+## Troubleshooting and Common Issues
+
+### Issue 1: High CPU Usage
+
+If you experience unexpectedly high CPU usage, ensure that the `-cpu` parameter is set correctly. For example, `-cpu=0.2` represents 20% CPU usage.
+
+### Issue 2: Container Fails to Start
+
+If the container fails to start, check the Docker logs for error messages. Ensure that the `-duration` parameter is set to a valid duration value.
+
+### Issue 3: Kubernetes Pod Restarting
+
+If the Kubernetes pod keeps restarting, ensure that the resource requests and limits are set appropriately in the manifest. Adjust the values based on your cluster's capacity.
+
+## Advanced Usage Scenarios
+
+### Scenario 1: Using Horizontal Pod Autoscaler (HPA)
+
+To automatically scale the number of pod replicas based on CPU usage, you can use a Horizontal Pod Autoscaler (HPA). Here is an example HPA manifest:
+
+```yaml
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cpu-stressor-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cpu-stressor-deployment
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+```
+
+### Scenario 2: Integrating with CI/CD Pipelines
+
+You can integrate the `k8s-pod-cpu-stressor` with your CI/CD pipelines for automated testing and monitoring. For example, you can use GitHub Actions to build and push the Docker image, and then deploy it to your Kubernetes cluster for stress testing.
+
+### Scenario 3: Monitoring with Prometheus and Grafana
+
+To monitor the resource usage of the `k8s-pod-cpu-stressor`, you can use Prometheus and Grafana. Set up Prometheus to scrape metrics from your Kubernetes cluster, and use Grafana to visualize the metrics. This helps identify bottlenecks and optimize resource allocation.
+
 ## Contributing
 
 Contributions are welcome! If you find a bug or have a suggestion, please open an issue or submit a pull request. For major changes, please discuss them first in the issue tracker.
