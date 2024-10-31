@@ -27,7 +27,7 @@ jobs:
     runs-on: "ubuntu-20.04"
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
 
       - name: Build an image from Dockerfile
         run: |
@@ -46,3 +46,7 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
+
+      - name: Clean up Docker images
+        run: |
+          docker image prune -f
