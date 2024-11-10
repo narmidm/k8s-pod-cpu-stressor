@@ -13,12 +13,16 @@ import (
 
 func main() {
 	cpuUsagePtr := flag.Float64("cpu", 0.2, "CPU usage as a fraction (e.g., 0.2 for 20% CPU usage)")
-	durationPtr := flag.Duration("duration", 10*time.Second, "Duration for the CPU stress (e.g., 10s)")
-	runForeverPtr := flag.Bool("forever", false, "Run CPU stress indefinitely")
+	durationPtr := flag.Duration("duration", 10*time.Second, "Duration for CPU and memory stress (e.g., 10s)")
+	runForeverPtr := flag.Bool("forever", false, "Run CPU and memory stress indefinitely")
 	memoryUsagePtr := flag.Float64("memory", 0.2, "Memory usage as a fraction (e.g., 0.2 for 20% memory usage)")
-	memDurationPtr := flag.Duration("memduration", 10*time.Second, "Duration for the memory stress (e.g., 10s)")
-	memForeverPtr := flag.Bool("memforever", false, "Run memory stress indefinitely")
 	flag.Parse()
+
+	// Validate memory usage
+	if *memoryUsagePtr < 0.0 || *memoryUsagePtr > 1.0 {
+		fmt.Println("Error: --memory must be a value between 0.0 and 1.0 (representing 0% to 100% memory usage)")
+		return
+	}
 
 	numCPU := runtime.NumCPU()
 	runtime.GOMAXPROCS(numCPU)
@@ -29,17 +33,16 @@ func main() {
 		numGoroutines = 1
 	}
 
-	fmt.Printf("Starting CPU stress with %d goroutines targeting %.2f CPU usage...\n", numGoroutines, *cpuUsagePtr)
+	// Log to indicate starting CPU and Memory stress
+	fmt.Printf("Starting CPU stress with %d goroutines targeting %.2f%% CPU usage and targeting %.2f%% memory usage...\n", numGoroutines, *cpuUsagePtr*100, *memoryUsagePtr*100)
 
 	done := make(chan struct{})
-
-	// Capture termination signals
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, os.Kill)
 
 	var stopFlag int32
 
-	// Improved workload generation
+	// CPU stress logic
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
 			workDuration := time.Duration(*cpuUsagePtr*1000) * time.Microsecond
@@ -53,7 +56,6 @@ func main() {
 				// Busy loop for the specified work duration
 				endWork := time.Now().Add(workDuration)
 				for time.Now().Before(endWork) {
-					// Perform a small computation to keep the CPU active
 					_ = rand.Float64() * rand.Float64()
 				}
 
@@ -65,15 +67,21 @@ func main() {
 
 	// Memory stress logic
 	go func() {
-		memUsage := int(float64(runtime.MemStats.Sys) * (*memoryUsagePtr))
-		memStress := make([]byte, memUsage)
-		for i := range memStress {
-			memStress[i] = byte(rand.Intn(256))
-		}
-
 		for {
 			if atomic.LoadInt32(&stopFlag) == 1 {
 				return
+			}
+
+			var memStats runtime.MemStats
+			runtime.ReadMemStats(&memStats)
+			memUsage := int(float64(memStats.Sys) * (*memoryUsagePtr)) // Use Sys to get the total allocated from OS
+			if memUsage < 1 {
+				memUsage = 1
+			}
+
+			memStress := make([]byte, memUsage)
+			for i := range memStress {
+				memStress[i] = byte(rand.Intn(256))
 			}
 
 			// Simulate memory usage
@@ -84,8 +92,8 @@ func main() {
 		}
 	}()
 
+	// Wait for either the quit signal or the duration to elapse
 	go func() {
-		// Wait for termination signal
 		<-quit
 		fmt.Println("\nTermination signal received. Stopping CPU and memory stress...")
 		atomic.StoreInt32(&stopFlag, 1)
@@ -94,19 +102,10 @@ func main() {
 
 	if !*runForeverPtr {
 		time.Sleep(*durationPtr)
-		fmt.Println("\nCPU stress completed.")
+		fmt.Println("\nCPU and memory stress completed.")
 		atomic.StoreInt32(&stopFlag, 1)
 		close(done)
-		// Keep the process running to prevent the pod from restarting
-		select {}
-	}
-
-	if !*memForeverPtr {
-		time.Sleep(*memDurationPtr)
-		fmt.Println("\nMemory stress completed.")
-		atomic.StoreInt32(&stopFlag, 1)
-		close(done)
-		// Keep the process running to prevent the pod from restarting
+		// Keep the process running to prevent pod from restarting
 		select {}
 	}
 
