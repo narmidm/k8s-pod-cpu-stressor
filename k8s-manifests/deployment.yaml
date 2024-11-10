@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-stressor-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cpu-stressor
+  template:
+    metadata:
+      labels:
+        app: cpu-stressor
+    spec:
+      containers:
+        - name: cpu-stressor
+          image: narmidm/k8s-pod-cpu-stressor:latest
+          args:
+            - "-cpu=0.2"
+            - "-duration=10s"
+            - "-forever"
+            - "-memory=0.2"
+            - "-memduration=10s"
+            - "-memforever"
+          resources:
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+            requests:
+              cpu: "100m"
+              memory: "128Mi"

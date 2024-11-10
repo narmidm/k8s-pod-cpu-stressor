@@ -15,6 +15,9 @@ func main() {
 	cpuUsagePtr := flag.Float64("cpu", 0.2, "CPU usage as a fraction (e.g., 0.2 for 20% CPU usage)")
 	durationPtr := flag.Duration("duration", 10*time.Second, "Duration for the CPU stress (e.g., 10s)")
 	runForeverPtr := flag.Bool("forever", false, "Run CPU stress indefinitely")
+	memoryUsagePtr := flag.Float64("memory", 0.2, "Memory usage as a fraction (e.g., 0.2 for 20% memory usage)")
+	memDurationPtr := flag.Duration("memduration", 10*time.Second, "Duration for the memory stress (e.g., 10s)")
+	memForeverPtr := flag.Bool("memforever", false, "Run memory stress indefinitely")
 	flag.Parse()
 
 	numCPU := runtime.NumCPU()
@@ -60,10 +63,31 @@ func main() {
 		}()
 	}
 
+	// Memory stress logic
+	go func() {
+		memUsage := int(float64(runtime.MemStats.Sys) * (*memoryUsagePtr))
+		memStress := make([]byte, memUsage)
+		for i := range memStress {
+			memStress[i] = byte(rand.Intn(256))
+		}
+
+		for {
+			if atomic.LoadInt32(&stopFlag) == 1 {
+				return
+			}
+
+			// Simulate memory usage
+			_ = memStress[rand.Intn(len(memStress))]
+
+			// Sleep for a short duration to simulate memory stress
+			time.Sleep(10 * time.Millisecond)
+		}
+	}()
+
 	go func() {
 		// Wait for termination signal
 		<-quit
-		fmt.Println("\nTermination signal received. Stopping CPU stress...")
+		fmt.Println("\nTermination signal received. Stopping CPU and memory stress...")
 		atomic.StoreInt32(&stopFlag, 1)
 		close(done)
 	}()
@@ -77,7 +101,16 @@ func main() {
 		select {}
 	}
 
+	if !*memForeverPtr {
+		time.Sleep(*memDurationPtr)
+		fmt.Println("\nMemory stress completed.")
+		atomic.StoreInt32(&stopFlag, 1)
+		close(done)
+		// Keep the process running to prevent the pod from restarting
+		select {}
+	}
+
 	// Run stress indefinitely
-	fmt.Println("CPU stress will run indefinitely. Press Ctrl+C to stop.")
+	fmt.Println("CPU and memory stress will run indefinitely. Press Ctrl+C to stop.")
 	<-done
 }

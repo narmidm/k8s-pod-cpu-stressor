@@ -46,6 +46,15 @@ To use the `k8s-pod-cpu-stressor`, you need to have the following installed:
    go build -o cpu-stress .
    ```
 
+### Applying Sample Manifests
+
+To quickly apply the sample Kubernetes manifests, navigate to the `k8s-manifests` folder and run the following command:
+
+```shell
+kubectl apply -f deployment.yaml
+kubectl apply -f job.yaml
+```
+
 ## Running with Docker
 
 Build the Docker image using the provided Dockerfile:
@@ -54,13 +63,13 @@ Build the Docker image using the provided Dockerfile:
    docker build -t k8s-pod-cpu-stressor .
    ```
 
-Run the Docker container, specifying the desired CPU usage, stress duration, and optionally whether to run CPU stress indefinitely:
+Run the Docker container, specifying the desired CPU usage, stress duration, memory usage, memory stress duration, and optionally whether to run CPU and memory stress indefinitely:
 
 ```shell
-docker run --rm k8s-pod-cpu-stressor -cpu=0.2 -duration=10s -forever
+docker run --rm k8s-pod-cpu-stressor -cpu=0.2 -duration=10s -forever -memory=0.2 -memduration=10s -memforever
 ```
 
-Replace `0.2` and `10s` with the desired CPU usage (fraction) and duration, respectively. Add `-forever` flag to run CPU stress indefinitely.
+Replace `0.2` and `10s` with the desired CPU usage (fraction), duration, memory usage (fraction), and memory stress duration, respectively. Add `-forever` and `-memforever` flags to run CPU and memory stress indefinitely.
 
 ## CPU Usage and Duration
 
@@ -72,14 +81,24 @@ The `k8s-pod-cpu-stressor` allows you to specify the desired CPU usage and stres
 
 - **Run Indefinitely**: To run CPU stress indefinitely, include the `-forever` flag.
 
-Adjust these parameters according to your requirements to simulate different CPU load scenarios.
+## Memory Usage and Duration
+
+The `k8s-pod-cpu-stressor` also allows you to specify the desired memory usage and stress duration using the following parameters:
+
+- **Memory Usage**: The memory usage is defined as a fraction of memory resources. It is specified using the `-memory` argument. For example, `-memory=0.2` represents a memory usage of 20%.
+
+- **Memory Stress Duration**: The memory stress duration defines how long the memory stress operation should run. It is specified using the `-memduration` argument, which accepts a duration value with a unit. Supported units include seconds (s), minutes (m), hours (h), and days (d). For example, `-memduration=10s` represents a memory stress duration of 10 seconds, `-memduration=5m` represents 5 minutes, `-memduration=2h` represents 2 hours, and `-memduration=1d` represents 1 day.
+
+- **Run Memory Stress Indefinitely**: To run memory stress indefinitely, include the `-memforever` flag.
+
+Adjust these parameters according to your requirements to simulate different CPU and memory load scenarios.
 
 ### Kubernetes Resource Requests and Limits
 
-It is recommended to specify Kubernetes resource requests and limits to control the amount of CPU resources consumed by the pod, and to prevent overloading your cluster. For example:
+It is recommended to specify Kubernetes resource requests and limits to control the amount of CPU and memory resources consumed by the pod, and to prevent overloading your cluster. For example:
 
-- **Requests**: This defines the minimum amount of CPU that the pod is guaranteed to have.
-- **Limits**: This defines the maximum amount of CPU that the pod can use.
+- **Requests**: This defines the minimum amount of CPU and memory that the pod is guaranteed to have.
+- **Limits**: This defines the maximum amount of CPU and memory that the pod can use.
 
 Adding requests and limits helps Kubernetes manage resources efficiently and ensures that your cluster remains stable during stress testing.
 
@@ -89,8 +108,10 @@ Example:
 resources:
   requests:
     cpu: "100m"
+    memory: "128Mi"
   limits:
     cpu: "200m"
+    memory: "256Mi"
 ```
 
 ## Check the Public Docker Image
@@ -127,16 +148,21 @@ spec:
             - "-cpu=0.2"
             - "-duration=10s"
             - "-forever"
+            - "-memory=0.2"
+            - "-memduration=10s"
+            - "-memforever"
           resources:
             limits:
               cpu: "200m"
+              memory: "256Mi"
             requests:
               cpu: "100m"
+              memory: "128Mi"
 ```
 
 ## Sample Job Manifest
 
-If you want to run the CPU stressor for a fixed duration as a one-time job, you can use the following Kubernetes Job manifest:
+If you want to run the CPU and memory stressor for a fixed duration as a one-time job, you can use the following Kubernetes Job manifest:
 
 ```yaml
 apiVersion: batch/v1
@@ -155,16 +181,29 @@ spec:
           args:
             - "-cpu=0.5"
             - "-duration=5m"
+            - "-memory=0.5"
+            - "-memduration=5m"
           resources:
             limits:
               cpu: "500m"
+              memory: "512Mi"
             requests:
               cpu: "250m"
+              memory: "256Mi"
       restartPolicy: Never
   backoffLimit: 3
 ```
 
 This manifest runs the `k8s-pod-cpu-stressor` as a Kubernetes Job, which will execute the stress test once for 5 minutes and then stop. The `backoffLimit` specifies the number of retries if the job fails.
+
+## Sample Kubernetes Manifests
+
+You can find sample Kubernetes manifests in the `k8s-manifests` folder. These manifests include deployment and job configurations for the `k8s-pod-cpu-stressor`. To quickly apply these manifests, navigate to the `k8s-manifests` folder and run the following command:
+
+```shell
+kubectl apply -f deployment.yaml
+kubectl apply -f job.yaml
+```
 
 ## Contributing
 
