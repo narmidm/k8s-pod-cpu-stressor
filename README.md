@@ -25,6 +25,8 @@ The `k8s-pod-cpu-stressor` is a tool designed to simulate CPU stress on Kubernet
 - Simulates CPU stress on Kubernetes pods.
 - Configurable CPU usage (in millicores) and stress duration.
 - Option to run CPU stress indefinitely.
+- Adaptive feedback control mechanism to maintain target CPU usage.
+- Respects Kubernetes resource limits.
 - Helps evaluate Kubernetes cluster performance and resource allocation.
 
 ## Getting Started
@@ -33,7 +35,7 @@ The `k8s-pod-cpu-stressor` is a tool designed to simulate CPU stress on Kubernet
 
 To use the `k8s-pod-cpu-stressor`, you need to have the following installed:
 
-- Go (version 1.19 or higher)
+- Go (version 1.24 or higher)
 - Docker
 
 ### Building the Binary
@@ -165,6 +167,17 @@ spec:
 ```
 
 This manifest runs the `k8s-pod-cpu-stressor` as a Kubernetes Job, which will execute the stress test once for 5 minutes and then stop. The `backoffLimit` specifies the number of retries if the job fails.
+
+## How It Works
+
+The CPU stressor uses an adaptive feedback control mechanism to maintain the target CPU usage even in constrained environments:
+
+1. **Baseline Measurement**: At startup, the tool measures the baseline CPU performance of the environment.
+2. **Feedback Control**: A continuous monitoring loop measures actual CPU usage and dynamically adjusts the workload to match the target usage.
+3. **Resource Awareness**: The tool respects container CPU limits, preventing resource overconsumption.
+4. **Adaptive Scaling**: The control mechanism automatically adapts to different CPU allocations, from very small (100m) to large (multiple cores).
+
+This approach ensures consistent behavior across different Kubernetes environments, regardless of the underlying hardware or resource constraints.
 
 ## Contributing
 
