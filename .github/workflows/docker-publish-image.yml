@@ -12,41 +12,46 @@ jobs:
     steps:
       # Step 1: Check out the repository
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v5
 
-      # Step 2: Set up Docker
+      # Step 2: Set up QEMU for multi-platform builds
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # Step 3: Set up Docker Buildx
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
-      # Step 3: Log in to Docker Hub
+      # Step 4: Log in to Docker Hub
       - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Step 4: Extract version from release tag
+      # Step 5: Log in to GitHub Container Registry
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 6: Extract version from release tag
       - name: Extract Version from Release Tag
         run: |
           VERSION=${GITHUB_REF##*/}
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-      # Step 5: Build Docker Image
-      - name: Build Docker Image
-        run: |
-          # Build Docker image
-          docker build -t narmidm/k8s-pod-cpu-stressor:latest .
-          # Tag the Docker image with the release version
-          docker tag narmidm/k8s-pod-cpu-stressor:latest narmidm/k8s-pod-cpu-stressor:${{ env.VERSION }}
-
-      # Step 6: Push Docker Image with Latest and Version Tags
-      - name: Push Docker Image
-        run: |
-          # Ensure the image is built and tagged successfully
-          docker images
-
-          # Push Docker image with latest tag
-          docker push narmidm/k8s-pod-cpu-stressor:latest
-
-          # Push Docker image with version tag
-          docker push narmidm/k8s-pod-cpu-stressor:${{ env.VERSION }}
+      # Step 7: Build and Push Multi-Platform Docker Image
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
+          push: true
+          tags: |
+            narmidm/k8s-pod-cpu-stressor:latest
+            narmidm/k8s-pod-cpu-stressor:${{ env.VERSION }}
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ env.VERSION }}
