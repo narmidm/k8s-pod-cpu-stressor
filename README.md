@@ -27,6 +27,8 @@ The `k8s-pod-cpu-stressor` is a tool designed to simulate CPU stress on Kubernet
 - Option to run CPU stress indefinitely.
 - Adaptive feedback control mechanism to maintain target CPU usage.
 - Respects Kubernetes resource limits.
+- Multi-architecture container support (`linux/amd64`, `linux/arm64`, `linux/s390x`, `linux/ppc64le`).
+- OpenShift and Kubernetes non-root Security Context Constraint (`restricted-v2`) compatible.
 - Helps evaluate Kubernetes cluster performance and resource allocation.
 
 ## Getting Started
@@ -50,11 +52,27 @@ To use the `k8s-pod-cpu-stressor`, you need to have the following installed:
 
 ## Running with Docker
 
-Build the Docker image using the provided Dockerfile:
+### Building Single Architecture Image
 
-   ```shell
-   docker build -t k8s-pod-cpu-stressor .
-   ```
+Build the Docker image locally for your current host architecture:
+
+```shell
+docker build -t k8s-pod-cpu-stressor .
+# or via Makefile
+make docker-build
+```
+
+### Building Multi-Architecture Images
+
+Build multi-platform images (`linux/amd64`, `linux/arm64`, `linux/s390x`, `linux/ppc64le`) using Docker Buildx:
+
+```shell
+docker buildx build --platform linux/amd64,linux/arm64,linux/s390x,linux/ppc64le -t k8s-pod-cpu-stressor:latest .
+# or via Makefile
+make docker-buildx
+```
+
+### Running the Container
 
 Run the Docker container, specifying the desired CPU usage, stress duration, and optionally whether to run CPU stress indefinitely:
 
@@ -97,7 +115,13 @@ resources:
 
 ## Check the Public Docker Image
 
-The [`k8s-pod-cpu-stressor`](https://hub.docker.com/r/narmidm/k8s-pod-cpu-stressor "Docker Hub - narmidm/k8s-pod-cpu-stressor") Docker image is publicly available on Docker Hub. You can check and pull the image using the following command:
+The [`k8s-pod-cpu-stressor`](https://hub.docker.com/r/narmidm/k8s-pod-cpu-stressor "Docker Hub - narmidm/k8s-pod-cpu-stressor") Docker image is publicly available on Docker Hub as a multi-arch manifest supporting:
+- `linux/amd64` (x86_64)
+- `linux/arm64` (AArch64)
+- `linux/s390x` (IBM Z)
+- `linux/ppc64le` (IBM Power)
+
+You can check and pull the image using the following command:
 
 ```shell
 docker pull narmidm/k8s-pod-cpu-stressor:latest
