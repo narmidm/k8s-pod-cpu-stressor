@@ -1,0 +1,44 @@
+name: Docker Build
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and smoke test image
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out the repository
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Step 2: Set up QEMU for multi-platform builds
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # Step 3: Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Step 4: Build all release platforms (same list as the CD pipeline), no push
+      - name: Build multi-platform image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
+          push: false
+
+      # Step 5: Build the host image and check it runs and exits after -duration
+      - name: Smoke test
+        run: |
+          docker build -t cpu-stressor:ci .
+          docker run --rm cpu-stressor:ci -version
+          timeout 30 docker run --rm cpu-stressor:ci -cpu=0.2 -duration=3s
