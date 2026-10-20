@@ -1,5 +1,5 @@
 # Build stage using official multi-arch Golang base
-FROM --platform=$BUILDPLATFORM golang:1.22-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.24-alpine AS builder
 
 ARG TARGETOS=linux
 ARG TARGETARCH
@@ -18,7 +18,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
     -o /app/cpu-stressor main.go
 
 # Minimal runtime image based on UBI minimal (multi-arch supported by Red Hat)
-FROM --platform=$TARGETPLATFORM registry.access.redhat.com/ubi9/ubi-minimal:latest
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 
 WORKDIR /
 
