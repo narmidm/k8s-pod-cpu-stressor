@@ -4,6 +4,11 @@ on:
   release:
     types: [published]
 
+# Default GITHUB_TOKEN is read-only in this repo; GHCR push needs packages: write
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   push:
     name: Push Docker Image to Registry
