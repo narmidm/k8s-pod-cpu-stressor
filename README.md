@@ -22,9 +22,11 @@ The `k8s-pod-cpu-stressor` is a tool designed to simulate CPU stress on Kubernet
 ## Features
 
 - Simulates CPU stress on Kubernetes pods.
-- Configurable CPU usage (as a fraction, e.g. `0.2`) and stress duration.
+- Exact CPU load in cores with `-cores` (e.g. `0.2` = 200m), independent of node size.
+- Automatic CPU limit detection with `-limit-fraction` (e.g. `0.8` = 80% of the pod's CPU limit).
+- Configurable stress duration.
 - Option to run CPU stress indefinitely.
-- Adaptive feedback control mechanism to maintain target CPU usage.
+- Feedback control (in `-cores` mode) that measures the process's real CPU time and keeps the load on target.
 - Respects Kubernetes resource limits.
 - Multi-architecture container support (`linux/amd64`, `linux/arm64`, `linux/s390x`, `linux/ppc64le`).
 - OpenShift and Kubernetes non-root Security Context Constraint (`restricted-v2`) compatible.
@@ -92,7 +94,11 @@ Replace `0.2` and `10s` with the desired CPU usage (fraction) and duration, resp
 
 The `k8s-pod-cpu-stressor` allows you to specify the desired CPU usage and stress duration using the following parameters:
 
-- **CPU Usage**: The CPU usage is defined as a fraction of CPU resources. It is specified using the `-cpu` argument. For example, `-cpu=0.2` represents a CPU usage of 20% or 200 milliCPU (mCPU).
+- **CPU Load (`-cores`, recommended)**: The exact CPU load in cores, independent of the node size. `-cores=0.2` uses 0.2 cores (200m), `-cores=1.5` uses 1.5 cores (1500m), whether the node has 2 CPUs or 64. Load above the container's CPU limit is capped by the limit.
+
+- **Fraction of the CPU limit (`-limit-fraction`)**: Detects the container's CPU limit automatically (`resources.limits.cpu`, read from the cgroup) and uses that fraction of it. With `limits.cpu: 500m`, `-limit-fraction=0.5` uses 0.25 cores. The limit is re-checked every second, so the load also follows an [in-place pod resize](https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/) without a restart. Without a CPU limit it falls back to the node's CPU count and prints a warning, so set a limit when you use this option. The detected value is printed at startup.
+
+- **CPU Usage (`-cpu`)**: The original option, a fraction between 0 and 1. The actual load **scales with the number of CPUs on the node**, so `-cpu=0.2` is 0.2 cores only on a single-CPU node. On a 14-CPU node it is about 0.6 cores, and `-cpu=0.5` on a 64-core node is about 16 cores (see [How It Works](#how-it-works)). It is kept unchanged for backward compatibility. If you use it, always set a CPU limit. Only one of `-cpu`, `-cores` and `-limit-fraction` can be used at a time.
 
 - **Stress Duration**: The stress duration defines how long the CPU stress operation should run. It is specified using the `-duration` argument, which accepts a duration value with a unit. Supported units are seconds (s), minutes (m) and hours (h), and they can be combined. For example, `-duration=10s` represents a stress duration of 10 seconds, `-duration=5m` represents 5 minutes, `-duration=2h` represents 2 hours, and `-duration=1h30m` represents 90 minutes. Days (`d`) are **not** supported; use hours instead, e.g. `-duration=24h` for 1 day.
 
@@ -203,14 +209,9 @@ This manifest runs the `k8s-pod-cpu-stressor` as a Kubernetes Job, which will ex
 
 ## How It Works
 
-The CPU stressor uses an adaptive feedback control mechanism to maintain the target CPU usage even in constrained environments:
+**`-cores` mode:** the target load is split across `ceil(cores)` workers. Each worker is busy for a fraction of every 10 ms period, so that together they use exactly `cores` CPUs. Once a second, the tool measures its own CPU time (user + system) and corrects the busy fraction, so the load stays on target regardless of node size. If a CPU limit is lower than `-cores`, the workers run flat out, the load is capped by the limit, and a warning is printed at startup. `-limit-fraction` reads the limit from `/sys/fs/cgroup/cpu.max` (cgroup v2) or `cpu.cfs_quota_us` (cgroup v1), converts it to a core count, and then runs the same way as `-cores`.
 
-1. **Baseline Measurement**: At startup, the tool measures the baseline CPU performance of the environment.
-2. **Feedback Control**: A continuous monitoring loop measures actual CPU usage and dynamically adjusts the workload to match the target usage.
-3. **Resource Awareness**: The tool respects container CPU limits, preventing resource overconsumption.
-4. **Adaptive Scaling**: The control mechanism automatically adapts to different CPU allocations, from very small (100m) to large (multiple cores).
-
-This approach ensures consistent behavior across different Kubernetes environments, regardless of the underlying hardware or resource constraints.
+**`-cpu` mode (original):** starts `int(node CPUs × cpu) + 1` workers, each busy a `cpu` fraction of the time. The total load is therefore roughly `(int(N × cpu) + 1) × cpu` cores and grows with the node's CPU count `N`. Set a Kubernetes CPU limit to cap it.
 
 ## Contributing
 

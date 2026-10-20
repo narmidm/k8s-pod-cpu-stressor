@@ -15,7 +15,7 @@ COPY . .
 # Statically compile pure Go binary for target architecture (s390x, amd64, arm64, ppc64le)
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
     -ldflags="-w -s" \
-    -o /app/cpu-stressor main.go
+    -o /app/cpu-stressor .
 
 # Minimal runtime image based on UBI minimal (multi-arch supported by Red Hat)
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
