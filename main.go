@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	version = "1.3.0"
+	version = "1.3.1"
 )
 
 // CPUUsageMonitor tracks CPU usage and provides feedback
@@ -97,13 +97,13 @@ func printUsage() {
 	fmt.Println("  -cpu=0.2       CPU usage as a fraction (e.g., 0.2 for 20% CPU usage)")
 	fmt.Println("  -duration=10s   Duration for the CPU stress (e.g., 10s, 5m, 1h)")
 	fmt.Println("  -forever        Run CPU stress indefinitely")
-	fmt.Println("  -keep-alive     Keep the process running after -duration ends (until signalled)")
+	fmt.Println("  -exit-on-complete  Exit when -duration ends (default: stay alive until signalled)")
 	fmt.Println("  -version        Show version information")
 	fmt.Println("  -help           Show this help message")
 	fmt.Println("\nExamples:")
 	fmt.Println("  cpu-stress -cpu=0.5 -duration=30s    # Use 50% CPU for 30 seconds")
 	fmt.Println("  cpu-stress -cpu=0.8 -forever         # Use 80% CPU indefinitely")
-	fmt.Println("  cpu-stress -cpu=0.5 -duration=30s -keep-alive  # Stress for 30s, then stay idle until stopped")
+	fmt.Println("  cpu-stress -cpu=0.5 -duration=30s -exit-on-complete  # Stress for 30s, then exit (Jobs)")
 }
 
 func main() {
@@ -111,7 +111,9 @@ func main() {
 	cpuUsagePtr := flag.Float64("cpu", 0.2, "CPU usage as a fraction (e.g., 0.2 for 20% CPU usage)")
 	durationPtr := flag.Duration("duration", 10*time.Second, "Duration for the CPU stress (e.g., 10s)")
 	runForeverPtr := flag.Bool("forever", false, "Run CPU stress indefinitely")
-	keepAlivePtr := flag.Bool("keep-alive", false, "Keep the process running after the duration ends")
+	exitOnCompletePtr := flag.Bool("exit-on-complete", false, "Exit after the duration ends instead of staying alive (e.g. for Jobs)")
+	// Deprecated: staying alive is the default again; kept so v1.3.0 manifests still parse
+	flag.Bool("keep-alive", true, "Deprecated: no-op, staying alive after the duration is the default")
 	showVersion := flag.Bool("version", false, "Show version information")
 	showHelp := flag.Bool("help", false, "Show help message")
 
@@ -261,8 +263,8 @@ func main() {
 		case <-time.After(*durationPtr):
 			fmt.Println("\nCPU stress completed.")
 			atomic.StoreInt32(&stopFlag, 1)
-			if *keepAlivePtr {
-				// Keep the process running until a termination signal is received
+			if !*exitOnCompletePtr {
+				// Keep the process running (as in v1.2.x) so Deployments don't restart the pod
 				fmt.Println("Keeping the process alive. Press Ctrl+C to stop.")
 				<-done
 			}
