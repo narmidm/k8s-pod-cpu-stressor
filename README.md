@@ -82,6 +82,13 @@ docker run --rm k8s-pod-cpu-stressor -cpu=0.2 -duration=10s -forever
 
 Replace `0.2` and `10s` with the desired CPU usage (fraction) and duration, respectively. Add `-forever` flag to run CPU stress indefinitely.
 
+> **Windows PowerShell users:** PowerShell splits arguments that start with `-` and contain a `.`, so `-cpu=0.2` reaches the program as `-cpu=0` and fails with `CPU usage must be between 0 and 1.0, got 0.00`. Use the double-dash form or quote the argument (both work the same way):
+>
+> ```powershell
+> docker run --rm k8s-pod-cpu-stressor --cpu=0.2 --duration=10s
+> docker run --rm k8s-pod-cpu-stressor '-cpu=0.2' -duration=10s
+> ```
+
 ## CPU Usage and Duration
 
 The `k8s-pod-cpu-stressor` allows you to specify the desired CPU usage and stress duration using the following parameters:
