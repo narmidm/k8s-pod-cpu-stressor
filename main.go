@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	version = "1.3.1"
+	version = "1.4.0"
 )
 
 // CPUUsageMonitor tracks CPU usage and provides feedback
@@ -95,6 +95,8 @@ func printUsage() {
 	fmt.Println("  cpu-stress [options]")
 	fmt.Println("\nOptions:")
 	fmt.Println("  -cpu=0.2       CPU usage as a fraction (e.g., 0.2 for 20% CPU usage)")
+	fmt.Println("  -cores=0.2     Exact CPU load in cores, independent of node size (0.2 = 200m)")
+	fmt.Println("  -limit-fraction=0.5  Fraction of the auto-detected container CPU limit (falls back to node CPUs)")
 	fmt.Println("  -duration=10s   Duration for the CPU stress (e.g., 10s, 5m, 1h)")
 	fmt.Println("  -forever        Run CPU stress indefinitely")
 	fmt.Println("  -exit-on-complete  Exit when -duration ends (default: stay alive until signalled)")
@@ -103,12 +105,16 @@ func printUsage() {
 	fmt.Println("\nExamples:")
 	fmt.Println("  cpu-stress -cpu=0.5 -duration=30s    # Use 50% CPU for 30 seconds")
 	fmt.Println("  cpu-stress -cpu=0.8 -forever         # Use 80% CPU indefinitely")
+	fmt.Println("  cpu-stress -cores=1.5 -forever       # Use exactly 1.5 cores (1500m) indefinitely")
+	fmt.Println("  cpu-stress -limit-fraction=0.8 -forever  # Use 80% of the pod's CPU limit indefinitely")
 	fmt.Println("  cpu-stress -cpu=0.5 -duration=30s -exit-on-complete  # Stress for 30s, then exit (Jobs)")
 }
 
 func main() {
 	// Parse command-line flags
 	cpuUsagePtr := flag.Float64("cpu", 0.2, "CPU usage as a fraction (e.g., 0.2 for 20% CPU usage)")
+	coresPtr := flag.Float64("cores", 0, "Exact CPU load in cores, independent of node size (e.g., 0.2 = 200m, 1.5 = 1500m)")
+	limitFractionPtr := flag.Float64("limit-fraction", 0, "CPU load as a fraction of the detected container CPU limit (e.g., 0.5 = 50% of the limit)")
 	durationPtr := flag.Duration("duration", 10*time.Second, "Duration for the CPU stress (e.g., 10s)")
 	runForeverPtr := flag.Bool("forever", false, "Run CPU stress indefinitely")
 	exitOnCompletePtr := flag.Bool("exit-on-complete", false, "Exit after the duration ends instead of staying alive (e.g. for Jobs)")
@@ -131,29 +137,46 @@ func main() {
 		os.Exit(0)
 	}
 
+	modes := 0
+	coresSet, limitFractionSet := false, false
+	flag.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "cpu":
+			modes++
+		case "cores":
+			modes++
+			coresSet = true
+		case "limit-fraction":
+			modes++
+			limitFractionSet = true
+		}
+	})
+	if modes > 1 {
+		fmt.Println("Error: use only one of -cpu, -cores or -limit-fraction")
+		os.Exit(1)
+	}
+	if coresSet && *coresPtr <= 0 {
+		fmt.Printf("Error: -cores must be greater than 0, got %.2f\n", *coresPtr)
+		os.Exit(1)
+	}
+	if limitFractionSet {
+		if *limitFractionPtr <= 0 || *limitFractionPtr > 1.0 {
+			fmt.Printf("Error: -limit-fraction must be between 0 and 1.0, got %.2f\n", *limitFractionPtr)
+			os.Exit(1)
+		}
+		avail, source := availableCPUs()
+		fmt.Printf("Detected %s: %.2f cores; targeting %.0f%% = %.2f cores\n",
+			source, avail, *limitFractionPtr*100, *limitFractionPtr*avail)
+		if _, limited := detectCPULimitIn(cgroupRoot); !limited {
+			fmt.Println("Warning: no container CPU limit found; -limit-fraction is using the node's CPU count. Set resources.limits.cpu, or use -cores for a fixed load")
+		}
+	}
+
 	// Validate CPU usage
 	if *cpuUsagePtr <= 0 || *cpuUsagePtr > 1.0 {
 		fmt.Printf("Error: CPU usage must be between 0 and 1.0, got %.2f\n", *cpuUsagePtr)
 		os.Exit(1)
 	}
-
-	numCPU := runtime.NumCPU()
-	runtime.GOMAXPROCS(numCPU)
-
-	// Get baseline CPU measurement for calibration
-	baselineCPU := getCPUUsage()
-	fmt.Printf("Baseline CPU measurement: %.6f ops/ns\n", baselineCPU)
-
-	// Create CPU usage monitor with the target usage
-	monitor := NewCPUUsageMonitor(*cpuUsagePtr)
-
-	// Number of goroutines to use for stressing CPU
-	numGoroutines := int(float64(numCPU)*(*cpuUsagePtr)) + 1
-	if numGoroutines < 1 {
-		numGoroutines = 1
-	}
-
-	fmt.Printf("Starting CPU stress with %d goroutines targeting %.2f CPU usage...\n", numGoroutines, *cpuUsagePtr)
 
 	done := make(chan struct{})
 
@@ -171,6 +194,78 @@ func main() {
 
 	var stopFlag int32
 
+	if limitFractionSet {
+		// Re-read the limit every interval so in-place pod resizes are followed
+		fraction := *limitFractionPtr
+		startCoresStress(func() float64 {
+			avail, _ := availableCPUs()
+			return fraction * avail
+		}, &stopFlag)
+	} else if coresSet {
+		cores := *coresPtr
+		startCoresStress(func() float64 { return cores }, &stopFlag)
+	} else {
+		startLegacyStress(*cpuUsagePtr, &stopFlag)
+	}
+
+	go func() {
+		// Wait for termination signal
+		<-quit
+		fmt.Println("\nTermination signal received. Stopping CPU stress...")
+		atomic.StoreInt32(&stopFlag, 1)
+		closeDone()
+	}()
+
+	if !*runForeverPtr {
+		select {
+		case <-time.After(*durationPtr):
+			fmt.Println("\nCPU stress completed.")
+			atomic.StoreInt32(&stopFlag, 1)
+			if !*exitOnCompletePtr {
+				// Keep the process running (as in v1.2.x) so Deployments don't restart the pod
+				fmt.Println("Keeping the process alive. Press Ctrl+C to stop.")
+				<-done
+			}
+		case <-done:
+		}
+	} else {
+		// Run stress indefinitely
+		fmt.Println("CPU stress will run indefinitely. Press Ctrl+C to stop.")
+		<-done
+	}
+}
+
+// legacyWorkerCount is the -cpu worker count: it scales with the node's CPU
+// count, so total load is about legacyWorkerCount*cpu cores. Kept as-is for
+// backward compatibility; use -cores for a node-independent load.
+func legacyWorkerCount(numCPU int, cpu float64) int {
+	n := int(float64(numCPU)*cpu) + 1
+	if n < 1 {
+		n = 1
+	}
+	return n
+}
+
+// startLegacyStress runs the original -cpu mode. It returns immediately;
+// everything stops once stopFlag is set to 1.
+func startLegacyStress(cpuUsage float64, stopFlag *int32) {
+	cpuUsagePtr := &cpuUsage
+
+	numCPU := runtime.NumCPU()
+	runtime.GOMAXPROCS(numCPU)
+
+	// Get baseline CPU measurement for calibration
+	baselineCPU := getCPUUsage()
+	fmt.Printf("Baseline CPU measurement: %.6f ops/ns\n", baselineCPU)
+
+	// Create CPU usage monitor with the target usage
+	monitor := NewCPUUsageMonitor(*cpuUsagePtr)
+
+	// Number of goroutines to use for stressing CPU
+	numGoroutines := legacyWorkerCount(numCPU, *cpuUsagePtr)
+
+	fmt.Printf("Starting CPU stress with %d goroutines targeting %.2f CPU usage...\n", numGoroutines, *cpuUsagePtr)
+
 	// Launch worker goroutines
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
@@ -182,7 +277,7 @@ func main() {
 			}
 
 			for {
-				if atomic.LoadInt32(&stopFlag) == 1 {
+				if atomic.LoadInt32(stopFlag) == 1 {
 					return
 				}
 
@@ -218,7 +313,7 @@ func main() {
 
 		const monitorInterval = 1 * time.Second
 		for {
-			if atomic.LoadInt32(&stopFlag) == 1 {
+			if atomic.LoadInt32(stopFlag) == 1 {
 				return
 			}
 
@@ -249,30 +344,4 @@ func main() {
 			time.Sleep(monitorInterval)
 		}
 	}()
-
-	go func() {
-		// Wait for termination signal
-		<-quit
-		fmt.Println("\nTermination signal received. Stopping CPU stress...")
-		atomic.StoreInt32(&stopFlag, 1)
-		closeDone()
-	}()
-
-	if !*runForeverPtr {
-		select {
-		case <-time.After(*durationPtr):
-			fmt.Println("\nCPU stress completed.")
-			atomic.StoreInt32(&stopFlag, 1)
-			if !*exitOnCompletePtr {
-				// Keep the process running (as in v1.2.x) so Deployments don't restart the pod
-				fmt.Println("Keeping the process alive. Press Ctrl+C to stop.")
-				<-done
-			}
-		case <-done:
-		}
-	} else {
-		// Run stress indefinitely
-		fmt.Println("CPU stress will run indefinitely. Press Ctrl+C to stop.")
-		<-done
-	}
 }
