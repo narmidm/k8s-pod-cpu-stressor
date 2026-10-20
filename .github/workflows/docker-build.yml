@@ -36,9 +36,18 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
           push: false
 
-      # Step 5: Build the host image and check it runs and exits after -duration
+      # Step 5: Build the host image and check exit behaviour
       - name: Smoke test
         run: |
           docker build -t cpu-stressor:ci .
           docker run --rm cpu-stressor:ci -version
-          timeout 30 docker run --rm cpu-stressor:ci -cpu=0.2 -duration=3s
+
+          # -exit-on-complete: exits 0 after -duration
+          timeout 30 docker run --rm cpu-stressor:ci -cpu=0.2 -duration=3s -exit-on-complete
+
+          # Default (v1.2.x compatible): stays alive after -duration, stops cleanly on SIGTERM
+          docker run -d --name stay cpu-stressor:ci -cpu=0.2 -duration=3s
+          sleep 8
+          test "$(docker inspect -f '{{.State.Running}}' stay)" = "true"
+          docker stop -t 5 stay
+          test "$(docker inspect -f '{{.State.ExitCode}}' stay)" = "0"

@@ -95,11 +95,11 @@ The `k8s-pod-cpu-stressor` allows you to specify the desired CPU usage and stres
 
 - **CPU Usage**: The CPU usage is defined as a fraction of CPU resources. It is specified using the `-cpu` argument. For example, `-cpu=0.2` represents a CPU usage of 20% or 200 milliCPU (mCPU).
 
-- **Stress Duration**: The stress duration defines how long the CPU stress operation should run. It is specified using the `-duration` argument, which accepts a duration value with a unit. Supported units include seconds (s), minutes (m), hours (h), and days (d). For example, `-duration=10s` represents a stress duration of 10 seconds, `-duration=5m` represents 5 minutes, `-duration=2h` represents 2 hours, and `-duration=1d` represents 1 day.
+- **Stress Duration**: The stress duration defines how long the CPU stress operation should run. It is specified using the `-duration` argument, which accepts a duration value with a unit. Supported units are seconds (s), minutes (m) and hours (h), and they can be combined. For example, `-duration=10s` represents a stress duration of 10 seconds, `-duration=5m` represents 5 minutes, `-duration=2h` represents 2 hours, and `-duration=1h30m` represents 90 minutes. Days (`d`) are **not** supported; use hours instead, e.g. `-duration=24h` for 1 day.
 
 - **Run Indefinitely**: To run CPU stress indefinitely, include the `-forever` flag.
 
-- **Exit Behaviour**: Without `-forever`, the process exits with status 0 once the duration ends. Add `-keep-alive` to keep the process running (idle) after the duration ends, e.g. in a Deployment where an exiting container would be restarted. In all modes the process exits promptly on `SIGINT` (Ctrl+C) or `SIGTERM`.
+- **Exit Behaviour**: By default, once the duration ends the CPU stress stops but the process stays alive (idle), so a Deployment doesn't restart the pod. Add `-exit-on-complete` to exit with status 0 when the duration ends instead, e.g. in a Kubernetes Job. In all modes the process exits promptly on `SIGINT` (Ctrl+C) or `SIGTERM`.
 
 Adjust these parameters according to your requirements to simulate different CPU load scenarios.
 
@@ -139,8 +139,6 @@ docker pull narmidm/k8s-pod-cpu-stressor:latest
 ## Sample Deployment Manifest
 
 Use the following deployment manifest as a starting point to deploy the k8s-pod-cpu-stressor image in your Kubernetes cluster:
-
-> **Note:** In a Deployment, use `-forever` (or `-keep-alive` together with `-duration`). Otherwise the container exits after the duration and Kubernetes restarts it.
 
 ```yaml
 apiVersion: apps/v1
@@ -192,6 +190,7 @@ spec:
           args:
             - "-cpu=0.5"
             - "-duration=5m"
+            - "-exit-on-complete"
           resources:
             limits:
               cpu: "500m"
@@ -201,7 +200,7 @@ spec:
   backoffLimit: 3
 ```
 
-This manifest runs the `k8s-pod-cpu-stressor` as a Kubernetes Job, which will execute the stress test once for 5 minutes and then stop. The `backoffLimit` specifies the number of retries if the job fails.
+This manifest runs the `k8s-pod-cpu-stressor` as a Kubernetes Job, which will execute the stress test once for 5 minutes and then stop. The `-exit-on-complete` flag is required here: without it the container stays alive after the duration and the Job never completes. The `backoffLimit` specifies the number of retries if the job fails.
 
 ## How It Works
 
