@@ -99,6 +99,8 @@ The `k8s-pod-cpu-stressor` allows you to specify the desired CPU usage and stres
 
 - **Run Indefinitely**: To run CPU stress indefinitely, include the `-forever` flag.
 
+- **Exit Behaviour**: Without `-forever`, the process exits with status 0 once the duration ends. Add `-keep-alive` to keep the process running (idle) after the duration ends, e.g. in a Deployment where an exiting container would be restarted. In all modes the process exits promptly on `SIGINT` (Ctrl+C) or `SIGTERM`.
+
 Adjust these parameters according to your requirements to simulate different CPU load scenarios.
 
 ### Kubernetes Resource Requests and Limits
@@ -137,6 +139,8 @@ docker pull narmidm/k8s-pod-cpu-stressor:latest
 ## Sample Deployment Manifest
 
 Use the following deployment manifest as a starting point to deploy the k8s-pod-cpu-stressor image in your Kubernetes cluster:
+
+> **Note:** In a Deployment, use `-forever` (or `-keep-alive` together with `-duration`). Otherwise the container exits after the duration and Kubernetes restarts it.
 
 ```yaml
 apiVersion: apps/v1

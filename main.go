@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 )
 
@@ -96,11 +97,13 @@ func printUsage() {
 	fmt.Println("  -cpu=0.2       CPU usage as a fraction (e.g., 0.2 for 20% CPU usage)")
 	fmt.Println("  -duration=10s   Duration for the CPU stress (e.g., 10s, 5m, 1h)")
 	fmt.Println("  -forever        Run CPU stress indefinitely")
+	fmt.Println("  -keep-alive     Keep the process running after -duration ends (until signalled)")
 	fmt.Println("  -version        Show version information")
 	fmt.Println("  -help           Show this help message")
 	fmt.Println("\nExamples:")
 	fmt.Println("  cpu-stress -cpu=0.5 -duration=30s    # Use 50% CPU for 30 seconds")
 	fmt.Println("  cpu-stress -cpu=0.8 -forever         # Use 80% CPU indefinitely")
+	fmt.Println("  cpu-stress -cpu=0.5 -duration=30s -keep-alive  # Stress for 30s, then stay idle until stopped")
 }
 
 func main() {
@@ -108,6 +111,7 @@ func main() {
 	cpuUsagePtr := flag.Float64("cpu", 0.2, "CPU usage as a fraction (e.g., 0.2 for 20% CPU usage)")
 	durationPtr := flag.Duration("duration", 10*time.Second, "Duration for the CPU stress (e.g., 10s)")
 	runForeverPtr := flag.Bool("forever", false, "Run CPU stress indefinitely")
+	keepAlivePtr := flag.Bool("keep-alive", false, "Keep the process running after the duration ends")
 	showVersion := flag.Bool("version", false, "Show version information")
 	showHelp := flag.Bool("help", false, "Show help message")
 
@@ -161,7 +165,7 @@ func main() {
 
 	// Capture termination signals
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, os.Kill)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 
 	var stopFlag int32
 
@@ -253,12 +257,17 @@ func main() {
 	}()
 
 	if !*runForeverPtr {
-		time.Sleep(*durationPtr)
-		fmt.Println("\nCPU stress completed.")
-		atomic.StoreInt32(&stopFlag, 1)
-		closeDone()
-		// Keep the process running to prevent the pod from restarting
-		select {}
+		select {
+		case <-time.After(*durationPtr):
+			fmt.Println("\nCPU stress completed.")
+			atomic.StoreInt32(&stopFlag, 1)
+			if *keepAlivePtr {
+				// Keep the process running until a termination signal is received
+				fmt.Println("Keeping the process alive. Press Ctrl+C to stop.")
+				<-done
+			}
+		case <-done:
+		}
 	} else {
 		// Run stress indefinitely
 		fmt.Println("CPU stress will run indefinitely. Press Ctrl+C to stop.")
